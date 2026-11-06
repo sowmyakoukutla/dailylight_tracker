@@ -1,7 +1,7 @@
 # Hash of the tracker app. When app/index.html changes, the hash changes,
 # so a new run shows a real diff in HCP Terraform.
 locals {
-  app_hash = filesha256("${path.module}/terraform/daylight/index.html")
+  app_hash = filesha256("${path.module}daylight/index.html")
 }
 
 # A friendly release name that changes whenever the app changes.
