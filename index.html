@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Daylight | Daily Routine Tracker</title>
+<style>
+:root{--bg:#f6f8f5;--card:#fff;--ink:#1d2b24;--mute:#6b7a72;--line:#e3e9e4;--green:#2f6b53;--soft:#dcebe2}
+@media (prefers-color-scheme:dark){:root{--bg:#121a16;--card:#1b2620;--ink:#e8f0eb;--mute:#93a59b;--line:#2a372f;--green:#7fc6a4;--soft:#24372d}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:system-ui,-apple-system,"Segoe UI",sans-serif}
+.wrap{max-width:900px;margin:0 auto;padding:24px 16px 48px}
+.eyebrow{font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--green);font-weight:700}
+h1{font-family:Georgia,serif;font-weight:600;font-size:clamp(28px,6vw,42px);margin:6px 0}
+.top{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;margin-bottom:16px}
+.nav button{background:var(--card);color:var(--ink);border:1px solid var(--line);border-radius:10px;padding:6px 12px;cursor:pointer}
+.cols{display:grid;grid-template-columns:2fr 1fr;gap:16px}
+@media (max-width:700px){.cols{grid-template-columns:1fr}}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px;margin-bottom:14px}
+.hero{display:flex;gap:18px;align-items:center;background:var(--soft);border-radius:16px;padding:16px;margin-bottom:14px}
+.hero b{font-size:30px}
+h3{margin:0 0 8px;font-size:15px}
+.row{display:flex;align-items:center;gap:10px;padding:8px 0;border-top:1px solid var(--line)}
+.row input{accent-color:var(--green);width:18px;height:18px}
+.row input:checked+span{color:var(--mute);text-decoration:line-through}
+.row span{flex:1}
+.row button{background:none;border:0;color:var(--mute);cursor:pointer}
+.bars{display:flex;gap:8px;align-items:flex-end;height:90px}
+.bars div{flex:1;text-align:center;font-size:11px;color:var(--mute)}
+.bars i{display:block;background:var(--soft);border-radius:6px;min-height:4px}
+.bars i.on{background:var(--green)}
+form{display:flex;gap:8px;flex-wrap:wrap}
+input[type=text],select{padding:8px;border:1px solid var(--line);border-radius:8px;background:var(--card);color:var(--ink)}
+input[type=text]{flex:1;min-width:140px}
+.add{background:var(--green);color:var(--bg);border:0;border-radius:10px;padding:8px 14px;cursor:pointer}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="eyebrow">Your personal routine tracker</div>
+  <h1>Make today count 🌱</h1>
+  <div class="top">
+    <div class="nav"><button id="prev">&lsaquo;</button> <strong id="date"></strong> <button id="next">&rsaquo;</button> <button id="today">Today</button></div>
+    <div id="streak"></div>
+  </div>
+  <div class="hero"><b id="pct">0%</b><div><strong id="msg"></strong><div id="count"></div></div></div>
+  <div class="cols">
+    <div>
+      <div class="card"><form id="form"><input type="text" id="name" placeholder="New activity" maxlength="60" required>
+        <select id="slot"><option>Morning</option><option>Afternoon</option><option>Evening</option></select>
+        <button class="add">+ Add activity</button></form></div>
+      <div id="list"></div>
+    </div>
+    <div class="card"><h3>Your weekly rhythm</h3><div class="bars" id="bars"></div></div>
+  </div>
+</div>
+<script>
+var KEY="daylight-v1", S={acts:[],done:{}}, cur=new Date();
+function load(){try{S=JSON.parse(localStorage.getItem(KEY))||S}catch(e){}
+  if(!S.acts.length){S.acts=[{id:1,name:"Wake up & get ready",slot:"Morning"},{id:2,name:"Workout",slot:"Morning"},{id:3,name:"Deep work block",slot:"Afternoon"},{id:4,name:"Evening walk",slot:"Evening"},{id:5,name:"Read 20 minutes",slot:"Evening"}]}}
+function save(){try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}}
+function pad(n){return n<10?"0"+n:""+n}
+function key(d){return d.getFullYear()+"-"+pad(d.getMonth()+1)+"-"+pad(d.getDate())}
+function esc(t){var e=document.createElement("div");e.textContent=t;return e.innerHTML}
+function pct(d){var n=S.acts.length;if(!n)return 0;var x=(S.done[key(d)]||[]).filter(function(id){return S.acts.some(function(a){return a.id===id})}).length;return x/n}
+function render(){
+  var k=key(cur),dn=S.done[k]||[];
+  document.getElementById("date").textContent=cur.toDateString();
+  var p=pct(cur);document.getElementById("pct").textContent=Math.round(p*100)+"%";
+  document.getElementById("count").textContent=Math.round(p*S.acts.length)+" of "+S.acts.length+" activities completed";
+  document.getElementById("msg").textContent=p===1?"All done. Well played.":"One step at a time.";
+  var h="";["Morning","Afternoon","Evening"].forEach(function(slot){
+    var items=S.acts.filter(function(a){return a.slot===slot});if(!items.length)return;
+    h+='<div class="card"><h3>'+slot+' routine</h3>';
+    items.forEach(function(a){h+='<div class="row"><input type="checkbox" data-id="'+a.id+'"'+(dn.indexOf(a.id)>-1?" checked":"")+'><span>'+esc(a.name)+'</span><button data-del="'+a.id+'" title="Remove">&times;</button></div>'});
+    h+='</div>'});
+  document.getElementById("list").innerHTML=h;
+  var s=new Date(cur),b="";s.setDate(cur.getDate()-((cur.getDay()+6)%7));
+  "MTWTFSS".split("").forEach(function(l,i){var d=new Date(s);d.setDate(s.getDate()+i);var v=pct(d);
+    b+='<div><i class="'+(v>0?"on":"")+'" style="height:'+Math.max(4,v*70)+'px"></i>'+l+'</div>'});
+  document.getElementById("bars").innerHTML=b;
+  var t=new Date(),n=0;if(pct(t)<1)t.setDate(t.getDate()-1);
+  while(pct(t)===1&&n<365){n++;t.setDate(t.getDate()-1)}
+  document.getElementById("streak").textContent="🔥 "+n+" day streak";
+}
+document.getElementById("list").addEventListener("click",function(e){
+  var id=e.target.getAttribute("data-id"),del=e.target.getAttribute("data-del"),k=key(cur);
+  if(id){id=+id;var a=S.done[k]||[];var i=a.indexOf(id);if(i>-1)a.splice(i,1);else a.push(id);S.done[k]=a;save();render()}
+  if(del){S.acts=S.acts.filter(function(a){return a.id!==+del});save();render()}});
+document.getElementById("form").addEventListener("submit",function(e){e.preventDefault();
+  var n=document.getElementById("name");S.acts.push({id:Date.now(),name:n.value.trim(),slot:document.getElementById("slot").value});n.value="";save();render()});
+document.getElementById("prev").onclick=function(){cur.setDate(cur.getDate()-1);render()};
+document.getElementById("next").onclick=function(){cur.setDate(cur.getDate()+1);render()};
+document.getElementById("today").onclick=function(){cur=new Date();render()};
+load();render();
+</script>
+</body>
+</html>
